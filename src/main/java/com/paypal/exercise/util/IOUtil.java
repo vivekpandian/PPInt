@@ -1,4 +1,4 @@
-package exercise.util;
+package com.paypal.exercise.util;
 
 import java.io.BufferedReader;
 import java.io.Console;
@@ -6,6 +6,11 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.IllegalFormatException;
 
+/**
+ * Helper class which has I/O functions.
+ * @author Vivek_Subburam
+ *
+ */
 public class IOUtil {
 	private static Console console = System.console();
 	

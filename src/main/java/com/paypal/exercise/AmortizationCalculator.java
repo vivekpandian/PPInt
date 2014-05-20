@@ -1,9 +1,24 @@
-package exercise;
+package com.paypal.exercise;
 
-import static exercise.util.IOUtil.printf;
-import static exercise.constants.AmortizationConstants.*;
+import static com.paypal.exercise.AmortizationConstants.AMMOUNT_BORROWED_DEFAULT;
+import static com.paypal.exercise.AmortizationConstants.APR_DEFAULT;
+import static com.paypal.exercise.AmortizationConstants.APR_RANGE_MAX;
+import static com.paypal.exercise.AmortizationConstants.APR_RANGE_MIN;
+import static com.paypal.exercise.AmortizationConstants.BORROW_RANGE_APR_MAX;
+import static com.paypal.exercise.AmortizationConstants.BORROW_RANGE_APR_MIN;
+import static com.paypal.exercise.AmortizationConstants.INITIAL_TERM_MONTHS_DEFAULT;
+import static com.paypal.exercise.AmortizationConstants.MONTHLY_INTEREST_DEFAULT;
+import static com.paypal.exercise.AmortizationConstants.MONTHLY_INTEREST_DIVISOR;
+import static com.paypal.exercise.AmortizationConstants.MONTHLY_PAYMENT_AMMOUNT_DEFAULT;
+import static com.paypal.exercise.AmortizationConstants.TERM_RANGE_MAX;
+import static com.paypal.exercise.AmortizationConstants.TERM_RANGE_MIN;
 
-public class AmortizationSchedule {
+import java.util.ArrayList;
+import java.util.List;
+
+import com.paypal.exercise.view.AmortizationSchedule;
+
+public class AmortizationCalculator {
 
 	private long amountBorrowed = AMMOUNT_BORROWED_DEFAULT; // in cents
 	private double apr = APR_DEFAULT;
@@ -17,6 +32,37 @@ public class AmortizationSchedule {
 	private static final double[] aprRange = new double[] { APR_RANGE_MIN, APR_RANGE_MAX };
 	private static final int[] termRange = new int[] { TERM_RANGE_MIN, TERM_RANGE_MAX };
 
+	/**
+	 * public constructor to initialize AmortizationSchedule with amount interestRate and years
+	 * @param amount        -- Loan Amount
+	 * @param interestRate  -- Interest Rate in percentage
+	 * @param years         -- No Of Years (Term)
+	 * @throws IllegalArgumentException
+	 */
+	public AmortizationCalculator(double amount, double interestRate, int years)
+			throws IllegalArgumentException {
+
+		if ((isValidBorrowAmount(amount) == false)
+				|| (isValidAPRValue(interestRate) == false)
+				|| (isValidTerm(years) == false)) {
+			throw new IllegalArgumentException();
+		}
+
+		amountBorrowed = Math.round(amount * 100);
+		apr = interestRate;
+		initialTermMonths = years * 12;
+
+		monthlyPaymentAmount = calculateMonthlyPayment();
+
+		// the following shouldn't happen with the available valid ranges
+		// for borrow amount, apr, and term; however, without range validation,
+		// monthlyPaymentAmount as calculated by calculateMonthlyPayment()
+		// may yield incorrect values with extreme input values
+		if (monthlyPaymentAmount > amountBorrowed) {
+			throw new IllegalArgumentException();
+		}
+	}
+	
 	private long calculateMonthlyPayment() {
 		// M = P * (J / (1 - (Math.pow(1/(1 + J), N))));
 		//
@@ -46,13 +92,7 @@ public class AmortizationSchedule {
 		return Math.round(rc);
 	}
 
-	// The output should include:
-	// The first column identifies the payment number.
-	// The second column contains the amount of the payment.
-	// The third column shows the amount paid to interest.
-	// The fourth column has the current balance. The total payment amount and
-	// the interest paid fields.
-	public void outputAmortizationSchedule() {
+	public List<AmortizationSchedule> findAmortizationSchedule() {
 		//
 		// To create the amortization table, create a loop in your program and
 		// follow these steps:
@@ -66,23 +106,20 @@ public class AmortizationSchedule {
 		// until the value Q (and hence P) goes to zero.
 		//
 
-		String formatString = "%1$-20s%2$-20s%3$-20s%4$s,%5$s,%6$s\n";
-		printf(formatString, "PaymentNumber", "PaymentAmount",
-				"PaymentInterest", "CurrentBalance", "TotalPayments",
-				"TotalInterestPaid");
+
+		List<AmortizationSchedule> amortizationSchedules = new ArrayList<AmortizationSchedule>();
 
 		long balance = amountBorrowed;
 		int paymentNumber = 0;
 		long totalPayments = 0;
 		long totalInterestPaid = 0;
 
-		// output is in dollars
-		formatString = "%1$-20d%2$-20.2f%3$-20.2f%4$.2f,%5$.2f,%6$.2f\n";
-		printf(formatString, paymentNumber++, 0d, 0d,
+		
+		AmortizationSchedule amortizationSchedule = new AmortizationSchedule (paymentNumber++, 0d, 0d,
 				((double) amountBorrowed) / 100d,
 				((double) totalPayments) / 100d,
 				((double) totalInterestPaid) / 100d);
-
+		
 		final int maxNumberOfPayments = initialTermMonths + 1;
 		while ((balance > 0) && (paymentNumber <= maxNumberOfPayments)) {
 			// Calculate H = P x J, this is your current monthly interest
@@ -119,42 +156,20 @@ public class AmortizationSchedule {
 			totalPayments += curMonthlyPaymentAmount;
 			totalInterestPaid += curMonthlyInterest;
 
-			// output is in dollars
-			printf(formatString, paymentNumber++,
+			
+			amortizationSchedule = new AmortizationSchedule (paymentNumber++,
 					((double) curMonthlyPaymentAmount) / 100d,
 					((double) curMonthlyInterest) / 100d,
 					((double) curBalance) / 100d,
 					((double) totalPayments) / 100d,
 					((double) totalInterestPaid) / 100d);
+			amortizationSchedules.add(amortizationSchedule);
 
 			// Set P equal to Q and go back to Step 1: You thusly loop around
 			// until the value Q (and hence P) goes to zero.
 			balance = curBalance;
 		}
-	}
-
-	public AmortizationSchedule(double amount, double interestRate, int years)
-			throws IllegalArgumentException {
-
-		if ((isValidBorrowAmount(amount) == false)
-				|| (isValidAPRValue(interestRate) == false)
-				|| (isValidTerm(years) == false)) {
-			throw new IllegalArgumentException();
-		}
-
-		amountBorrowed = Math.round(amount * 100);
-		apr = interestRate;
-		initialTermMonths = years * 12;
-
-		monthlyPaymentAmount = calculateMonthlyPayment();
-
-		// the following shouldn't happen with the available valid ranges
-		// for borrow amount, apr, and term; however, without range validation,
-		// monthlyPaymentAmount as calculated by calculateMonthlyPayment()
-		// may yield incorrect values with extreme input values
-		if (monthlyPaymentAmount > amountBorrowed) {
-			throw new IllegalArgumentException();
-		}
+		return amortizationSchedules;
 	}
 
 	public static boolean isValidBorrowAmount(double amount) {
