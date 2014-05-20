@@ -1,6 +1,6 @@
 Please follow the steps to execute this program.
 
-1. To Execute the project. Go to the project and the run gradle command
+1. To Execute the project. Go to the project and run the gradle command
 	
 	> gradle jar
 	
